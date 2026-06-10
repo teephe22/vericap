@@ -176,27 +176,27 @@
         const initializeApp = () => {
     setTimeout(() => {
 
-        // 🔒 Block access from regular browsers — Telegram WebApp only
-        if (!WebApp || !WebApp.initDataUnsafe || !WebApp.initDataUnsafe.user) {
-            initScreen.style.display = 'none';
-            initScreen.classList.remove('active');
+        // 🔒 Block regular browser access
+        const isTelegram = WebApp && WebApp.initData && WebApp.initData.length > 0
 
-            // Show blocked message
+        if (!isTelegram) {
+            initScreen.style.display = 'none'
+            initScreen.classList.remove('active')
             document.querySelector('.content').innerHTML = `
-                <div class="status error" style="display:block; opacity:1; transform:none;">
+                <div class="status error" style="display:block; opacity:1; transform:none; margin:0;">
                     <i class="fas fa-ban"></i>
                     <h2>Access Denied</h2>
-                    <p>This verification can only be completed inside Telegram. Please open it from the bot.</p>
+                    <p>This page can only be opened inside Telegram. Please tap the button in the bot.</p>
                 </div>
-            `;
-            return;
+            `
+            return
         }
 
-        // ✅ Came from Telegram — proceed to CAPTCHA
-        showCaptcha();
+        // ✅ Inside Telegram — proceed
+        showCaptcha()
 
-    }, 1000);
-};
+    }, 1000)
+        }
 
         const check = async () => {
     const enteredCaptcha = document.getElementById('entered-captcha').value.trim();
