@@ -181,42 +181,51 @@
         };
 
         const check = async () => {
-            const enteredCaptcha = document.getElementById('entered-captcha').value.trim();
-            statusBox.classList.remove('success', 'error');
+    const enteredCaptcha = document.getElementById('entered-captcha').value.trim();
+    statusBox.classList.remove('success', 'error');
 
-            if (enteredCaptcha === captcha) {
-                // SUCCESS
-                statusBox.classList.add('success');
-                statusBox.innerHTML = '<i class="fas fa-check-circle"></i><h2>Verification Successful</h2><p>Click "Return to Chat" below.</p>';
+    if (enteredCaptcha === captcha) {
+        // SUCCESS
+        statusBox.classList.add('success');
+        statusBox.innerHTML = '<i class="fas fa-check-circle"></i><h2>Verification Successful</h2><p>Click "Return to Chat" below.</p>';
 
-                document.getElementById('entered-captcha').disabled = true;
-                verifyBtn.style.display = 'none';
-                closeBtn.style.display = 'block';
+        document.getElementById('entered-captcha').disabled = true;
+        verifyBtn.style.display = 'none';
+        closeBtn.style.display = 'block';
 
-                // Send webhook to bot
-                try {
-                    await fetch(WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_id: currentUserId,
-                            success: true,
-                            timestamp: new Date().toISOString(),
-                            captcha_code: captcha
-                        })
-                    });
-                    console.log("Webhook sent for user:", currentUserId);
-                } catch (error) {
-                    console.error("Webhook error:", error);
-                }
+        // Generate device fingerprint
+        const fingerprint = [
+            navigator.userAgent,
+            navigator.language,
+            screen.width + "x" + screen.height,
+            new Date().getTimezoneOffset()
+        ].join("|");
 
-            } else {
-                // FAIL
-                statusBox.classList.add('error');
-                statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i><h2>Verification Failed</h2><p>Code mismatch. A new CAPTCHA has been generated.</p>';
-                generate();
-            }
-        };
+        // Send webhook to bot
+        try {
+            await fetch(WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: currentUserId,
+                    success: true,
+                    timestamp: new Date().toISOString(),
+                    captcha_code: captcha,
+                    device: btoa(fingerprint)
+                })
+            });
+            console.log("Webhook sent for user:", currentUserId);
+        } catch (error) {
+            console.error("Webhook error:", error);
+        }
+
+    } else {
+        // FAIL
+        statusBox.classList.add('error');
+        statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i><h2>Verification Failed</h2><p>Code mismatch. A new CAPTCHA has been generated.</p>';
+        generate();
+    }
+};
 
         function createParticles() {
             const container = document.getElementById('particles');
