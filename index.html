@@ -194,30 +194,42 @@
         closeBtn.style.display = 'block';
 
         // Generate device fingerprint
-        const fingerprint = [
-            navigator.userAgent,
-            navigator.language,
-            screen.width + "x" + screen.height,
-            new Date().getTimezoneOffset()
-        ].join("|");
+const fingerprintData = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + "x" + screen.height,
+    screen.colorDepth,
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || 0,
+    navigator.platform || ""
+].join("|");
 
-        // Send webhook to bot
-        try {
-            await fetch(WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_id: currentUserId,
-                    success: true,
-                    timestamp: new Date().toISOString(),
-                    captcha_code: captcha,
-                    device: btoa(fingerprint)
-                })
-            });
-            console.log("Webhook sent for user:", currentUserId);
-        } catch (error) {
-            console.error("Webhook error:", error);
-        }
+// Simple hash function (no btoa issues)
+let hash = 0;
+for (let i = 0; i < fingerprintData.length; i++) {
+    let char = fingerprintData.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+}
+const deviceFingerprint = Math.abs(hash).toString();
+
+// Send webhook to bot
+try {
+    await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            user_id: currentUserId,
+            success: true,
+            timestamp: new Date().toISOString(),
+            captcha_code: captcha,
+            device: deviceFingerprint
+        })
+    });
+    console.log("Webhook sent for user:", currentUserId, "Device:", deviceFingerprint);
+} catch (error) {
+    console.error("Webhook error:", error);
+}
 
     } else {
         // FAIL
