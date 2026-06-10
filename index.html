@@ -120,11 +120,18 @@
         const WebApp = window.Telegram && window.Telegram.WebApp;
         let currentUserId = null;
         let isValidTelegramUser = false;
+        let verifyToken = null;
 
         const urlParams = new URLSearchParams(window.location.search);
         const WEBHOOK_URL = urlParams.get("url");
+        verifyToken = urlParams.get("token");
 
-        // Get current user ID from Telegram only
+        // 🚨 BLOCK 1: Must have a valid token
+        if (!verifyToken || verifyToken.length < 10) {
+            console.error("Missing or invalid verification token");
+        }
+
+        // 🚨 BLOCK 2: Must be inside Telegram WebApp with valid user
         if (WebApp && WebApp.initDataUnsafe && WebApp.initDataUnsafe.user) {
             currentUserId = WebApp.initDataUnsafe.user.id.toString();
             isValidTelegramUser = true;
@@ -143,7 +150,6 @@
             initScreen.classList.remove('active');
             initScreen.style.display = 'none';
             captchaScreen.style.display = 'block';
-            // Small delay to trigger CSS transition
             setTimeout(() => {
                 captchaScreen.classList.add('active');
             }, 50);
@@ -172,90 +178,96 @@
             closeBtn.style.display = 'none';
         };
 
-        const showBlocked = () => {
-            initScreen.style.display = 'none'
-            initScreen.classList.remove('active')
+        const showBlocked = (reason) => {
+            initScreen.style.display = 'none';
+            initScreen.classList.remove('active');
             document.querySelector('.content').innerHTML = `
                 <div class="status error" style="display:block; opacity:1; transform:none; margin:0;">
                     <i class="fas fa-ban"></i>
                     <h2>Access Denied</h2>
-                    <p>This page can only be opened inside Telegram. Please tap the button in the bot.</p>
+                    <p>${reason || "This page can only be opened inside Telegram. Please tap the button in the bot."}</p>
                 </div>
-            `
-        }
+            `;
+        };
 
         const initializeApp = () => {
             setTimeout(() => {
-                if (!isValidTelegramUser) {
-                    showBlocked()
-                    return
+                // 🚨 STRICT ENFORCEMENT: Must have token + Telegram WebApp
+                if (!verifyToken || verifyToken.length < 10) {
+                    showBlocked("Invalid or missing verification token.");
+                    return;
                 }
-                showCaptcha()
-            }, 1000)
-        }
+                if (!isValidTelegramUser || !currentUserId) {
+                    showBlocked("This page can only be opened inside Telegram.");
+                    return;
+                }
+                showCaptcha();
+            }, 1000);
+        };
 
         const check = async () => {
-    const enteredCaptcha = document.getElementById('entered-captcha').value.trim();
-    statusBox.classList.remove('success', 'error');
+            const enteredCaptcha = document.getElementById('entered-captcha').value.trim();
+            statusBox.classList.remove('success', 'error');
 
-    // 🔒 Final security gate — block browser submissions
-    if (!isValidTelegramUser || !currentUserId) {
-        statusBox.classList.add('error')
-        statusBox.innerHTML = '<i class="fas fa-ban"></i><h2>Access Denied</h2><p>Verification must be completed inside Telegram.</p>'
-        verifyBtn.style.display = 'none'
-        return
-    }
+            // 🚨 Final security gate — block if any check fails
+            if (!isValidTelegramUser || !currentUserId || !verifyToken) {
+                statusBox.classList.add('error');
+                statusBox.innerHTML = '<i class="fas fa-ban"></i><h2>Access Denied</h2><p>Verification must be completed inside Telegram.</p>';
+                verifyBtn.style.display = 'none';
+                return;
+            }
 
-    if (enteredCaptcha === captcha) {
-        statusBox.classList.add('success');
-        statusBox.innerHTML = '<i class="fas fa-check-circle"></i><h2>Verification Successful</h2><p>Click "Return to Chat" below.</p>';
+            if (enteredCaptcha === captcha) {
+                statusBox.classList.add('success');
+                statusBox.innerHTML = '<i class="fas fa-check-circle"></i><h2>Verification Successful</h2><p>Click "Return to Chat" below.</p>';
 
-        document.getElementById('entered-captcha').disabled = true;
-        verifyBtn.style.display = 'none';
-        closeBtn.style.display = 'block';
+                document.getElementById('entered-captcha').disabled = true;
+                verifyBtn.style.display = 'none';
+                closeBtn.style.display = 'block';
 
-        // Generate device fingerprint
-        const fingerprintData = [
-            navigator.userAgent,
-            navigator.language,
-            screen.width + "x" + screen.height,
-            screen.colorDepth,
-            new Date().getTimezoneOffset(),
-            navigator.hardwareConcurrency || 0,
-            navigator.platform || ""
-        ].join("|");
+                // Generate device fingerprint
+                const fingerprintData = [
+                    navigator.userAgent,
+                    navigator.language,
+                    screen.width + "x" + screen.height,
+                    screen.colorDepth,
+                    new Date().getTimezoneOffset(),
+                    navigator.hardwareConcurrency || 0,
+                    navigator.platform || ""
+                ].join("|");
 
-        let hash = 0;
-        for (let i = 0; i < fingerprintData.length; i++) {
-            let char = fingerprintData.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        const deviceFingerprint = Math.abs(hash).toString();
+                let hash = 0;
+                for (let i = 0; i < fingerprintData.length; i++) {
+                    let char = fingerprintData.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                const deviceFingerprint = Math.abs(hash).toString();
 
-        try {
-            await fetch(WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_id: currentUserId,
-                    success: true,
-                    timestamp: new Date().toISOString(),
-                    captcha_code: captcha,
-                    device: deviceFingerprint
-                })
-            });
-            console.log("Webhook sent for user:", currentUserId, "Device:", deviceFingerprint);
-        } catch (error) {
-            console.error("Webhook error:", error);
-        }
+                try {
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: currentUserId,
+                            success: true,
+                            timestamp: new Date().toISOString(),
+                            captcha_code: captcha,
+                            device: deviceFingerprint,
+                            token: verifyToken  // 🔐 Send token for server validation
+                        })
+                    });
+                    console.log("Webhook sent for user:", currentUserId);
+                } catch (error) {
+                    console.error("Webhook error:", error);
+                }
 
-    } else {
-        statusBox.classList.add('error');
-        statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i><h2>Verification Failed</h2><p>Code mismatch. A new CAPTCHA has been generated.</p>';
-        generate();
-    }
-};
+            } else {
+                statusBox.classList.add('error');
+                statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i><h2>Verification Failed</h2><p>Code mismatch. A new CAPTCHA has been generated.</p>';
+                generate();
+            }
+        };
 
         function createParticles() {
             const container = document.getElementById('particles');
