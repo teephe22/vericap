@@ -202,8 +202,16 @@
     const enteredCaptcha = document.getElementById('entered-captcha').value.trim();
     statusBox.classList.remove('success', 'error');
 
+    // 🔒 Final security gate — block browser submissions
+    const isTelegram = WebApp && WebApp.initData && WebApp.initData.length > 0
+    if (!isTelegram) {
+        statusBox.classList.add('error')
+        statusBox.innerHTML = '<i class="fas fa-ban"></i><h2>Access Denied</h2><p>Verification must be completed inside Telegram.</p>'
+        verifyBtn.style.display = 'none'
+        return
+    }
+
     if (enteredCaptcha === captcha) {
-        // SUCCESS
         statusBox.classList.add('success');
         statusBox.innerHTML = '<i class="fas fa-check-circle"></i><h2>Verification Successful</h2><p>Click "Return to Chat" below.</p>';
 
@@ -212,45 +220,42 @@
         closeBtn.style.display = 'block';
 
         // Generate device fingerprint
-const fingerprintData = [
-    navigator.userAgent,
-    navigator.language,
-    screen.width + "x" + screen.height,
-    screen.colorDepth,
-    new Date().getTimezoneOffset(),
-    navigator.hardwareConcurrency || 0,
-    navigator.platform || ""
-].join("|");
+        const fingerprintData = [
+            navigator.userAgent,
+            navigator.language,
+            screen.width + "x" + screen.height,
+            screen.colorDepth,
+            new Date().getTimezoneOffset(),
+            navigator.hardwareConcurrency || 0,
+            navigator.platform || ""
+        ].join("|");
 
-// Simple hash function (no btoa issues)
-let hash = 0;
-for (let i = 0; i < fingerprintData.length; i++) {
-    let char = fingerprintData.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-}
-const deviceFingerprint = Math.abs(hash).toString();
+        let hash = 0;
+        for (let i = 0; i < fingerprintData.length; i++) {
+            let char = fingerprintData.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        const deviceFingerprint = Math.abs(hash).toString();
 
-// Send webhook to bot
-try {
-    await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            user_id: currentUserId,
-            success: true,
-            timestamp: new Date().toISOString(),
-            captcha_code: captcha,
-            device: deviceFingerprint
-        })
-    });
-    console.log("Webhook sent for user:", currentUserId, "Device:", deviceFingerprint);
-} catch (error) {
-    console.error("Webhook error:", error);
-}
+        try {
+            await fetch(WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: currentUserId,
+                    success: true,
+                    timestamp: new Date().toISOString(),
+                    captcha_code: captcha,
+                    device: deviceFingerprint
+                })
+            });
+            console.log("Webhook sent for user:", currentUserId, "Device:", deviceFingerprint);
+        } catch (error) {
+            console.error("Webhook error:", error);
+        }
 
     } else {
-        // FAIL
         statusBox.classList.add('error');
         statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i><h2>Verification Failed</h2><p>Code mismatch. A new CAPTCHA has been generated.</p>';
         generate();
