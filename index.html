@@ -172,6 +172,19 @@
 
     #verify-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    /* Loading spinner */
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(192,192,192,0.1);
+      border-top: 3px solid #c0c0c0;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 10px auto;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     #msg {
       width: 100%;
       text-align: center;
@@ -180,11 +193,13 @@
       font-size: 14px;
       font-weight: 500;
       display: none;
+      line-height: 1.5;
     }
 
-    #msg.success { display: block; background: rgba(46,204,113,0.1); border: 1px solid rgba(46,204,113,0.3); color: #2ecc71; }
-    #msg.error   { display: block; background: rgba(231,76,60,0.1);  border: 1px solid rgba(231,76,60,0.3);  color: #e74c3c; }
+    #msg.success { display: block; background: rgba(46,204,113,0.1);  border: 1px solid rgba(46,204,113,0.3);  color: #2ecc71; }
+    #msg.error   { display: block; background: rgba(231,76,60,0.1);   border: 1px solid rgba(231,76,60,0.3);   color: #e74c3c; }
     #msg.info    { display: block; background: rgba(192,192,192,0.07); border: 1px solid rgba(192,192,192,0.15); color: rgba(192,192,192,0.8); }
+    #msg.warning { display: block; background: rgba(255,165,0,0.1);   border: 1px solid rgba(255,165,0,0.3);   color: #ffa500; }
 
     .footer {
       text-align: center;
@@ -212,16 +227,17 @@
     <div id="ad-box">
       <button id="ad-close" onclick="closeAd()">✕</button>
       <div id="ad-inner">
-  <script>
-    atOptions = {
-      'key' : 'f07970e08ef1e38472bb4d1d3518b491',
-      'format' : 'iframe',
-      'height' : 250,
-      'width' : 300,
-      'params' : {}
-    };
-  </script>
-  <script src="https://www.highperformanceformat.com/f07970e08ef1e38472bb4d1d3518b491/invoke.js"></script>
+        <!-- REPLACE WITH YOUR 300x250 AD SCRIPT -->
+        <script>
+          atOptions = {
+            'key' : 'f07970e08ef1e38472bb4d1d3518b491',
+            'format' : 'iframe',
+            'height' : 250,
+            'width' : 300,
+            'params' : {}
+          };
+        </script>
+        <script src="https://www.highperformanceformat.com/f07970e08ef1e38472bb4d1d3518b491/invoke.js"></script>
       </div>
     </div>
   </div>
@@ -235,18 +251,28 @@
       <p>Complete the CAPTCHA to continue</p>
     </div>
 
-    <div class="content">
+    <div class="content" id="main-content">
 
-      <div class="info-box">
-        <span>🔒 One-Time Verification</span>
-        Prove you're a real user to access the bot. This only needs to be done once per account.
+      <!-- Loading state shown first -->
+      <div id="loading-screen">
+        <div class="spinner"></div>
+        <div class="info-box">
+          <span>🔍 Checking account...</span>
+          Please wait while we verify your status.
+        </div>
       </div>
 
-      <div class="captcha-wrap">
-        <div class="h-captcha" data-sitekey="d258eb2e-8840-45d0-a92c-2b3a28ee9b42"></div>
+      <!-- Captcha screen (hidden until check passes) -->
+      <div id="captcha-screen" style="display:none; width:100%; flex-direction:column; align-items:center; gap:18px;">
+        <div class="info-box">
+          <span>🔒 One-Time Verification</span>
+          Prove you're a real user to access the bot. This only needs to be done once per account.
+        </div>
+        <div class="captcha-wrap">
+          <div class="h-captcha" data-sitekey="d258eb2e-8840-45d0-a92c-2b3a28ee9b42"></div>
+        </div>
+        <button id="verify-btn" onclick="submitVerification()">✅ Verify & Continue</button>
       </div>
-
-      <button id="verify-btn" onclick="submitVerification()">✅ Verify & Continue</button>
 
       <div id="msg"></div>
 
@@ -256,6 +282,7 @@
   </div>
 
   <script>
+    // ===== TELEGRAM SETUP =====
     const WebApp = window.Telegram && window.Telegram.WebApp
     let currentUserId = null
     let isValidTelegramUser = false
@@ -269,40 +296,17 @@
 
     const urlParams = new URLSearchParams(window.location.search)
     const WEBHOOK_URL = urlParams.get("url")
+    const CHECK_URL = urlParams.get("check")
+
     const msg = document.getElementById("msg")
     const btn = document.getElementById("verify-btn")
+    const loadingScreen = document.getElementById("loading-screen")
+    const captchaScreen = document.getElementById("captcha-screen")
 
-    if (!isValidTelegramUser) {
-      btn.disabled = true
-      showMsg("⛔ This page can only be opened inside Telegram.", "error")
-    }
+    // Device fingerprint (computed once, used in both precheck and submit)
+    let deviceFingerprint = null
 
-    function closeAd() {
-      document.getElementById("ad-overlay").style.display = "none"
-    }
-
-    function showMsg(text, type) {
-      msg.textContent = text
-      msg.className = type
-    }
-
-    async function submitVerification() {
-      if (!isValidTelegramUser || !currentUserId) {
-        showMsg("⛔ Access denied. Open this from Telegram.", "error")
-        return
-      }
-
-      const captchaResponse = hcaptcha.getResponse()
-      if (!captchaResponse) {
-        showMsg("⚠️ Please complete the CAPTCHA first.", "error")
-        return
-      }
-
-      btn.disabled = true
-      btn.textContent = "⏳ Verifying..."
-      showMsg("Sending verification...", "info")
-
-      // Device fingerprint
+    function computeFingerprint() {
       const fingerprintData = [
         navigator.userAgent,
         navigator.language,
@@ -319,7 +323,91 @@
         hash = ((hash << 5) - hash) + char
         hash = hash & hash
       }
-      const deviceFingerprint = Math.abs(hash).toString()
+      return Math.abs(hash).toString()
+    }
+
+    function closeAd() {
+      document.getElementById("ad-overlay").style.display = "none"
+    }
+
+    function showMsg(text, type) {
+      msg.textContent = text
+      msg.className = type
+    }
+
+    function showBlocked(message) {
+      loadingScreen.style.display = "none"
+      captchaScreen.style.display = "none"
+      document.getElementById("main-content").innerHTML = `
+        <div style="width:100%; text-align:center; padding:20px; background:rgba(231,76,60,0.1); border:1px solid rgba(231,76,60,0.3); border-radius:12px; color:#e74c3c;">
+          <div style="font-size:40px; margin-bottom:12px;">⛔</div>
+          <div style="font-size:17px; font-weight:600; margin-bottom:8px;">Access Denied</div>
+          <div style="font-size:13px; line-height:1.6; color:rgba(231,76,60,0.8);">${message}</div>
+        </div>
+      `
+    }
+
+    function showCaptcha() {
+      loadingScreen.style.display = "none"
+      captchaScreen.style.display = "flex"
+    }
+
+    // ===== INITIALIZE =====
+    window.addEventListener("load", async () => {
+
+      // Block non-Telegram users immediately
+      if (!isValidTelegramUser) {
+        showBlocked("This page can only be opened inside Telegram.<br>Please tap the button in the bot.")
+        return
+      }
+
+      // Compute fingerprint once
+      deviceFingerprint = computeFingerprint()
+
+      // Pre-check with bot
+      if (CHECK_URL) {
+        try {
+          const res = await fetch(CHECK_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: currentUserId,
+              device: deviceFingerprint
+            })
+          })
+          const result = await res.json()
+
+          if (result.blocked) {
+            showBlocked("Multiple accounts detected.<br>This device or IP is already linked to another account.")
+            return
+          }
+
+        } catch (e) {
+          console.error("Pre-check failed:", e)
+          // If check fails, allow through anyway
+        }
+      }
+
+      // All clear — show CAPTCHA
+      showCaptcha()
+    })
+
+    // ===== SUBMIT VERIFICATION =====
+    async function submitVerification() {
+      if (!isValidTelegramUser || !currentUserId) {
+        showMsg("⛔ Access denied. Open this from Telegram.", "error")
+        return
+      }
+
+      const captchaResponse = hcaptcha.getResponse()
+      if (!captchaResponse) {
+        showMsg("⚠️ Please complete the CAPTCHA first.", "error")
+        return
+      }
+
+      btn.disabled = true
+      btn.textContent = "⏳ Verifying..."
+      showMsg("Sending verification...", "info")
 
       try {
         await fetch(WEBHOOK_URL, {
