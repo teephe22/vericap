@@ -8,35 +8,162 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: linear-gradient(135deg, #2a5c82 0%, #6a11cb 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; overflow-x: hidden; }
-        .container { width: 100%; max-width: 400px; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 20px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.2); animation: containerSlide 0.8s ease-out; position: relative; }
-        .header { background: rgba(0,0,0,0.2); padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; }
-        .logo { width: 60px; height: 60px; background: linear-gradient(135deg, #2a5c82 0%, #6a11cb 100%); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 30px; color: white; animation: logoPulse 2s infinite ease-in-out; box-shadow: 0 0 20px rgba(106,17,203,0.5); }
-        h1 { color: white; font-size: 24px; margin-bottom: 5px; animation: fadeIn 1s ease-out; }
-        .subtitle { color: rgba(255,255,255,0.7); font-size: 14px; animation: fadeIn 1.2s ease-out; }
+        body { 
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%); 
+            min-height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px; 
+            overflow-x: hidden; 
+        }
+        .container { 
+            width: 100%; 
+            max-width: 400px; 
+            background: linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%); 
+            backdrop-filter: blur(10px); 
+            border-radius: 20px; 
+            overflow: hidden; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(192,192,192,0.1); 
+            animation: containerSlide 0.8s ease-out; 
+            position: relative; 
+            border: 1px solid rgba(192,192,192,0.15);
+        }
+        .header { 
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); 
+            padding: 20px; 
+            text-align: center; 
+            border-bottom: 1px solid rgba(192,192,192,0.2); 
+            position: relative; 
+            overflow: hidden; 
+        }
+        .logo { 
+            width: 60px; 
+            height: 60px; 
+            background: linear-gradient(135deg, #4a4a4a 0%, #c0c0c0 100%); 
+            border-radius: 50%; 
+            margin: 0 auto 15px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 30px; 
+            color: #1a1a1a; 
+            animation: logoPulse 2s infinite ease-in-out; 
+            box-shadow: 0 0 20px rgba(192,192,192,0.4); 
+        }
+        h1 { color: #e0e0e0; font-size: 24px; margin-bottom: 5px; animation: fadeIn 1s ease-out; }
+        .subtitle { color: #a0a0a0; font-size: 14px; animation: fadeIn 1.2s ease-out; }
         .content { padding: 25px; }
         .screen { display: none; opacity: 0; transform: translateY(20px); transition: all 0.5s ease; }
         .screen.active { display: block; opacity: 1; transform: translateY(0); }
-        .status { text-align: center; margin-bottom: 20px; padding: 15px; border-radius: 12px; background: rgba(255,255,255,0.1); color: white; animation: fadeIn 0.8s ease-out; }
-        .status i { font-size: 30px; margin-bottom: 5px; display: block; }
-        .status h2 { font-size: 20px; margin-bottom: 5px; }
-        .status p { font-size: 14px; }
-        .status.success { background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.3); animation: statusPulse 2s infinite; }
-        .status.error { background: rgba(231,76,60,0.2); border: 1px solid rgba(231,76,60,0.3); animation: shake 0.5s ease; }
+        .status { 
+            text-align: center; 
+            margin-bottom: 20px; 
+            padding: 15px; 
+            border-radius: 12px; 
+            background: rgba(192,192,192,0.08); 
+            color: #d0d0d0; 
+            animation: fadeIn 0.8s ease-out; 
+            border: 1px solid rgba(192,192,192,0.1);
+        }
+        .status i { font-size: 30px; margin-bottom: 5px; display: block; color: #c0c0c0; }
+        .status h2 { font-size: 20px; margin-bottom: 5px; color: #e0e0e0; }
+        .status p { font-size: 14px; color: #a0a0a0; }
+        .status.success { 
+            background: rgba(46,204,113,0.15); 
+            border: 1px solid rgba(46,204,113,0.3); 
+            animation: statusPulse 2s infinite; 
+        }
+        .status.success i { color: #2ecc71; }
+        .status.error { 
+            background: rgba(231,76,60,0.15); 
+            border: 1px solid rgba(231,76,60,0.3); 
+            animation: shake 0.5s ease; 
+        }
+        .status.error i { color: #e74c3c; }
         .form-group { margin-bottom: 20px; text-align: center; }
         .input-display { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-        #generated-captcha { width: 100%; max-width: 200px; padding: 15px; font-size: 28px; font-weight: bold; text-align: center; border: none; border-radius: 12px; background: rgba(0,0,0,0.3); color: #2ecc71; outline: none; cursor: default; letter-spacing: 5px; transition: all 0.3s ease; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
-        #entered-captcha { width: 100%; padding: 12px; border: none; border-radius: 12px; background: rgba(255,255,255,0.9); color: #333; font-size: 16px; text-align: center; transition: all 0.3s ease; outline: none; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; background: linear-gradient(135deg, #2a5c82 0%, #6a11cb 100%); color: white; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; margin-top: 10px; position: relative; overflow: hidden; }
-        .btn-secondary { background: rgba(255,255,255,0.1); }
-        .footer { text-align: center; padding: 20px; color: rgba(255,255,255,0.5); font-size: 12px; border-top: 1px solid rgba(255,255,255,0.1); }
+        #generated-captcha { 
+            width: 100%; 
+            max-width: 200px; 
+            padding: 15px; 
+            font-size: 28px; 
+            font-weight: bold; 
+            text-align: center; 
+            border: none; 
+            border-radius: 12px; 
+            background: linear-gradient(145deg, #0a0a0a, #1a1a1a); 
+            color: #c0c0c0; 
+            outline: none; 
+            cursor: default; 
+            letter-spacing: 5px; 
+            transition: all 0.3s ease; 
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 0 10px rgba(192,192,192,0.1); 
+            border: 1px solid rgba(192,192,192,0.2);
+        }
+        #entered-captcha { 
+            width: 100%; 
+            padding: 12px; 
+            border: none; 
+            border-radius: 12px; 
+            background: rgba(192,192,192,0.1); 
+            color: #e0e0e0; 
+            font-size: 16px; 
+            text-align: center; 
+            transition: all 0.3s ease; 
+            outline: none; 
+            border: 1px solid rgba(192,192,192,0.2);
+        }
+        #entered-captcha::placeholder { color: #808080; }
+        #entered-captcha:focus { 
+            background: rgba(192,192,192,0.15); 
+            border-color: rgba(192,192,192,0.4); 
+            box-shadow: 0 0 15px rgba(192,192,192,0.2); 
+        }
+        .btn { 
+            width: 100%; 
+            padding: 15px; 
+            border: none; 
+            border-radius: 12px; 
+            background: linear-gradient(135deg, #4a4a4a 0%, #808080 100%); 
+            color: #1a1a1a; 
+            font-size: 16px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            margin-top: 10px; 
+            position: relative; 
+            overflow: hidden; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .btn:hover { 
+            background: linear-gradient(135deg, #808080 0%, #c0c0c0 100%); 
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 20px rgba(192,192,192,0.3); 
+        }
+        .btn-secondary { 
+            background: rgba(192,192,192,0.08); 
+            color: #c0c0c0; 
+            border: 1px solid rgba(192,192,192,0.2);
+        }
+        .btn-secondary:hover { 
+            background: rgba(192,192,192,0.15); 
+            color: #e0e0e0; 
+        }
+        .footer { 
+            text-align: center; 
+            padding: 20px; 
+            color: #606060; 
+            font-size: 12px; 
+            border-top: 1px solid rgba(192,192,192,0.1); 
+        }
         .floating-shapes { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; overflow: hidden; }
-        .shape { position: absolute; background: rgba(255,255,255,0.03); border-radius: 50%; }
+        .shape { position: absolute; background: rgba(192,192,192,0.03); border-radius: 50%; }
         .shape:nth-child(1) { width: 80px; height: 80px; top: -20px; left: -20px; animation: float 15s infinite linear; }
         .shape:nth-child(2) { width: 120px; height: 120px; bottom: -50px; right: -50px; animation: float 18s infinite linear reverse; }
         .shape:nth-child(3) { width: 60px; height: 60px; top: 40%; left: 80%; animation: float 12s infinite linear; }
         .particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
-        .particle { position: absolute; background: rgba(255,255,255,0.3); border-radius: 50%; animation: floatParticle 15s infinite linear; }
+        .particle { position: absolute; background: rgba(192,192,192,0.2); border-radius: 50%; animation: floatParticle 15s infinite linear; }
         @keyframes containerSlide { from { opacity: 0; transform: translateY(50px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes logoPulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -242,31 +369,30 @@
                 }
                 const deviceFingerprint = Math.abs(hash).toString();
 
-                // 🔥 CRITICAL FIX: Send as form-encoded data, NOT JSON
-                // BJS webhooks receive data in the 'content' variable as form-encoded
-                const formData = new URLSearchParams();
-                formData.append('user_id', currentUserId);
-                formData.append('success', 'true');
-                formData.append('timestamp', new Date().toISOString());
-                formData.append('captcha_code', captcha);
-                formData.append('device', deviceFingerprint);
-                formData.append('token', verifyToken);
+                // 🔥 CRITICAL FIX: Use GET request with query params instead of POST
+                // This avoids CORS issues and is more reliable with BJS webhooks
+                const params = new URLSearchParams();
+                params.append('content', JSON.stringify({
+                    user_id: currentUserId,
+                    success: true,
+                    timestamp: new Date().toISOString(),
+                    captcha_code: captcha,
+                    device: deviceFingerprint,
+                    token: verifyToken
+                }));
+
+                const fullUrl = WEBHOOK_URL + (WEBHOOK_URL.includes('?') ? '&' : '?') + params.toString();
 
                 try {
-                    const response = await fetch(WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
-                        body: formData.toString()
+                    // Use GET with query params - avoids CORS preflight issues
+                    const response = await fetch(fullUrl, {
+                        method: 'GET',
+                        mode: 'no-cors' // Important for cross-origin requests to BJS
                     });
                     
-                    console.log("Webhook response status:", response.status);
-                    console.log("Webhook sent for user:", currentUserId);
+                    console.log("Webhook GET sent. URL:", fullUrl);
                 } catch (error) {
                     console.error("Webhook error:", error);
-                    statusBox.classList.add('error');
-                    statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i><h2>Network Error</h2><p>Could not reach server. Please try again.</p>';
                 }
 
             } else {
