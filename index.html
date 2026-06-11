@@ -126,12 +126,12 @@
         const WEBHOOK_URL = urlParams.get("url");
         verifyToken = urlParams.get("token");
 
-        // 🚨 BLOCK 1: Must have a valid token
+        // Must have a valid token
         if (!verifyToken || verifyToken.length < 10) {
             console.error("Missing or invalid verification token");
         }
 
-        // 🚨 BLOCK 2: Must be inside Telegram WebApp with valid user
+        // Must be inside Telegram WebApp with valid user
         if (WebApp && WebApp.initDataUnsafe && WebApp.initDataUnsafe.user) {
             currentUserId = WebApp.initDataUnsafe.user.id.toString();
             isValidTelegramUser = true;
@@ -192,7 +192,6 @@
 
         const initializeApp = () => {
             setTimeout(() => {
-                // 🚨 STRICT ENFORCEMENT: Must have token + Telegram WebApp
                 if (!verifyToken || verifyToken.length < 10) {
                     showBlocked("Invalid or missing verification token.");
                     return;
@@ -209,7 +208,6 @@
             const enteredCaptcha = document.getElementById('entered-captcha').value.trim();
             statusBox.classList.remove('success', 'error');
 
-            // 🚨 Final security gate — block if any check fails
             if (!isValidTelegramUser || !currentUserId || !verifyToken) {
                 statusBox.classList.add('error');
                 statusBox.innerHTML = '<i class="fas fa-ban"></i><h2>Access Denied</h2><p>Verification must be completed inside Telegram.</p>';
@@ -244,22 +242,31 @@
                 }
                 const deviceFingerprint = Math.abs(hash).toString();
 
+                // 🔥 CRITICAL FIX: Send as form-encoded data, NOT JSON
+                // BJS webhooks receive data in the 'content' variable as form-encoded
+                const formData = new URLSearchParams();
+                formData.append('user_id', currentUserId);
+                formData.append('success', 'true');
+                formData.append('timestamp', new Date().toISOString());
+                formData.append('captcha_code', captcha);
+                formData.append('device', deviceFingerprint);
+                formData.append('token', verifyToken);
+
                 try {
-                    await fetch(WEBHOOK_URL, {
+                    const response = await fetch(WEBHOOK_URL, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_id: currentUserId,
-                            success: true,
-                            timestamp: new Date().toISOString(),
-                            captcha_code: captcha,
-                            device: deviceFingerprint,
-                            token: verifyToken  // 🔐 Send token for server validation
-                        })
+                        headers: { 
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: formData.toString()
                     });
+                    
+                    console.log("Webhook response status:", response.status);
                     console.log("Webhook sent for user:", currentUserId);
                 } catch (error) {
                     console.error("Webhook error:", error);
+                    statusBox.classList.add('error');
+                    statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i><h2>Network Error</h2><p>Could not reach server. Please try again.</p>';
                 }
 
             } else {
